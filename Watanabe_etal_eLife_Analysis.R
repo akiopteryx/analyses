@@ -674,3 +674,10 @@ plotNetwork2(rhos=EMMLi.chick$rho$`modules.sep.Mod + sep.between`, module_names=
   pls.gator <- integration.test(abind(cerebellum.shape[,,gator.dev], medulla.shape[,,gator.dev], along=1), partition.gp=partitions[c(cerebellum, medulla)], iter=9999)
   pls.chick <- integration.test(abind(cerebellum.shape[,,chick.dev], medulla.shape[,,chick.dev], along=1), partition.gp=partitions[c(cerebellum, medulla)], iter=9999)
   compare.pls(A=pls.gator, A2=pls.chick, two.tailed=FALSE)
+
+### PROPORTIONAL VARIANCE OF M-L AXIS ###
+library(matrixcalc)
+total.var <- matrix.trace(var(two.d.array(shape.data[,,])))
+xy.var <- matrix.trace(var(two.d.array(shape.data[,1:2,]))) # x, y axes correspond to sagittal plane after Procrustes alignment
+z.var <- matrix.trace(var(t(shape.data[,3,])))
+prop.z.var <- z.var/total.var

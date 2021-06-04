@@ -56,7 +56,7 @@ plotNetwork2 <- function (rhos, module_names = NULL, linecolour = "#7C7444",  # 
 
 ### << INITIALIZATION >> ###
 {
-setwd("/Users/watanabe/Google Drive/Projects/TheropodBrainEvolution/MS/eLife/InitialSubmission/")
+setwd("...") # !! set working directory to where the coordinate data file is located !! #
 left.lm <- c(1:54,109:137,168:170,173:175,178:180,183:185,188:190,193:195,198:200,203:205,208:210,213:215,218:220,222:224)
 }
 

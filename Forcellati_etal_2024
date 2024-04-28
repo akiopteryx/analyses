@@ -1,1 +1,299 @@
+### CODE FOR:
+### @TITLE: Neuroanatomical Shape Variation of Large-Bodied, Flightless Ratites (Aves: Palaeognathae) Emerges Through Distinct Developmental Allometry >> ###
+### @AUTHORS: Meghan Forcellati, Todd Green, Akinobu Watanabe
 
+### Updated: 28 April 2024
+
+### LIBRARIES ###
+library(Morpho)
+library(geomorph)
+library(ggplot2)
+library(paleomorph)
+
+### INITIALIZATION ###
+n.lm <- 673  # Total no. of landmarks and curve semi-LMs
+sp.dim <- 3  # Spatial dimensionality of data (2-D or 3-D)
+fixed <- as.integer(c(1:13))  # Discrete landmarks
+midline.lm <- c(1,2,7,10,11,13)  # midline points
+age.data <- read.csv("./RatiteEndocast_AgeData.csv", header=TRUE, row.names=1)
+embryos <- which(age.data < 0)  # remove pre-hatching specimens from age.data
+
+### ALIGNMENT ###
+coord.slid <- read.table("./RatiteEndocastSlidCoord.txt", header=FALSE, row.names=1)
+coord.slid <- arrayspecs(coord.slid, ncol(coord.slid)/3, 3)
+gpa <- gpagen(coord.slid)
+cs <- gpa$Csize
+log.cs <- log(cs)
+shape.data <- gpa$coords[1:219,,]  # ! MAGIC NUMBER ! #
+labels <- dimnames(shape.data)[[3]]
+
+### DATA PARTITION ###
+Cc <- c(1:18)  # cassowary
+Dn <- c(29:42)  # emu
+Gg <- c(19:28,43:45,60)  # chicken
+Sc <- c(46:59)  # ostrich
+# HH ages for C018 and emu embryos are arbitrary set to 30 days.
+
+cerebrum <- c(1:4,14:34,80:139)
+opticlobe <- c(5:6,35:43,140:173)
+cerebellum <- c(7:10,44:61,174:201)
+medulla <- c(11:13,62:79,202:219)
+tax.code <- rep("Gg", dim(coord.slid)[3])  # ! MAGIC NUMBER ! #
+tax.code[Cc] <- "Cc"
+tax.code[Dn] <- "Dn"
+tax.code[Sc] <- "Sc"
+tax.code.2 <- rep("Gg", dim(coord.slid)[3])
+tax.code.2[c(Cc,Dn,Sc)] <- "ratite"
+ratites <- sort(c(Cc, Dn, Sc))
+tax.code.3 <- tax.code
+tax.code.3[Dn] <- "Cc"
+cass.emu <- sort(c(Cc, Dn))
+
+### Age Data ###
+## Add gestational period for total age
+Cc.gest <- 48
+Gg.gest <- 21
+En.gest <- 50
+Sc.gest <- 42
+tot.age <- age.data$Age_Days
+tot.age[which(tax.code == "Cc")] <- tot.age[which(tax.code == "Cc")]+Cc.gest  
+tot.age[which(tax.code == "Gg")] <- tot.age[which(tax.code == "Gg")]+Gg.gest
+tot.age[which(tax.code == "En")] <- tot.age[which(tax.code == "En")]+En.gest
+tot.age[which(tax.code == "Sc")] <- tot.age[which(tax.code == "Sc")]+Sc.gest
+## Standardize by approximate age of sexual maturity
+std.tot.age <- tot.age*10000
+std.tot.age[which(tax.code == "Cc")] <- std.tot.age[which(tax.code == "Cc")]/(365*5)   # Southern cassowary reaches sexual maturity 4-7 years
+std.tot.age[which(tax.code == "Gg")] <- std.tot.age[which(tax.code == "Gg")]/(7*12)   # Gallus reaches sexual maturity in 12 weeks
+std.tot.age[which(tax.code == "En")] <- std.tot.age[which(tax.code == "En")]/(365*2)   # Emus reach sexual maturity 2-3 years
+std.tot.age[which(tax.code == "Sc")] <- std.tot.age[which(tax.code == "Sc")]/(365*2)   # Ostriches reach sexual maturity ~2 years
+
+### CS vs Age ###
+mspace.palette <- c("#00FF99","#66CCFF", "#FF7A0D", "#FFD961")
+{
+  p <- ggplot(data=NULL, aes(x=age.data$Age_Days[-embryos], y=cs[-embryos]))
+  p <- p + geom_point(size=6, shape=21, colour="black", stroke=2, fill=mspace.palette[factor(tax.code)][-embryos])
+  p <- p + xlab("Age (Days Post-Hatching)") + ylab("Centroid Size")
+  p <- p + geom_text(aes(label=labels[-embryos], hjust=-0.1), size=3, colour="black")
+  p <- p + theme_bw() # + coord_fixed(ratio=1)
+  p <- p + theme(axis.title=element_text(size=18), axis.text=element_text(size=12), panel.border = element_blank(), panel.grid.major = element_line(colour="grey"), panel.grid.minor = element_line(colour="grey"), axis.line = element_line(colour = "black"), legend.title=element_blank())
+  p
+}
+{
+  p <- ggplot(data=NULL, aes(x=log(age.data$Age_Days[-embryos]), y=cs[-embryos]))
+  p <- p + geom_point(size=6, shape=21, colour="black", stroke=2, fill=mspace.palette[factor(tax.code)][-embryos])
+  p <- p + xlab("Log Age (Days Post-Hatching)") + ylab("Centroid Size")
+  #p <- p + geom_text(aes(label=labels[-embryos], hjust=-0.1), size=3, colour="black")
+  p <- p + theme_bw() # + coord_fixed(ratio=1)
+  p <- p + theme(axis.title=element_text(size=18), axis.text=element_text(size=12), panel.border = element_blank(), panel.grid.major = element_line(colour="grey"), panel.grid.minor = element_line(colour="grey"), axis.line = element_line(colour = "black"), legend.title=element_blank())
+  p
+}
+{
+  p <- ggplot(data=NULL, aes(x=log(tot.age), y=cs))
+  p <- p + geom_point(size=6, shape=21, colour="black", stroke=2, fill=mspace.palette[factor(tax.code)])
+  p <- p + xlab("Log Total Age") + ylab("Centroid Size")
+  #p <- p + xlim(-0.075, 0.15)
+  p <- p + geom_text(aes(label=labels, hjust=-0.1), size=3, colour="black")
+  p <- p + theme_bw() # + coord_fixed(ratio=1)
+  p <- p + theme(axis.title=element_text(size=18), axis.text=element_text(size=12), panel.border = element_blank(), panel.grid.major = element_line(colour="grey"), panel.grid.minor = element_line(colour="grey"), axis.line = element_line(colour = "black"), legend.title=element_blank())
+  p
+}
+{
+  p <- ggplot(data=NULL, aes(x=tot.age, y=cs))
+  p <- p + geom_point(size=6, shape=21, colour="black", stroke=2, fill=mspace.palette[factor(tax.code)])
+  p <- p + xlab("Total Age") + ylab("Centroid Size")
+  #p <- p + xlim(-0.075, 0.15)
+  p <- p + geom_text(aes(label=labels, hjust=-0.1), size=3, colour="black")
+  p <- p + theme_bw() # + coord_fixed(ratio=1)
+  p <- p + theme(axis.title=element_text(size=18), axis.text=element_text(size=12), panel.border = element_blank(), panel.grid.major = element_line(colour="grey"), panel.grid.minor = element_line(colour="grey"), axis.line = element_line(colour = "black"), legend.title=element_blank())
+  p
+}
+
+### PC MORPHOSPACE ###
+pca.shape <- prcomp(two.d.array(shape.data))
+pc1.shape <- pca.shape$x[,1]
+pc2.shape <- pca.shape$x[,2]
+pc3.shape <- pca.shape$x[,3]
+
+ ## PC & size correlation ##
+pc1.cs <- lm(pc1.shape~log.cs)
+summary(pc1.cs)
+pc2.cs <- lm(pc2.shape~log.cs)
+summary(pc2.cs)
+
+mspace.palette <- c("#00FF99","#66CCFF", "#FF7A0D", "#FFD961")  # colorblind friendly palette
+{
+  p <- ggplot(data=NULL, aes(x=pc1.shape, y=pc2.shape))
+  p <- p + geom_point(size=6, shape=21, colour="black", stroke=2, fill=mspace.palette[factor(tax.code)])
+  p <- p + xlab("PC1 (37.6%)") + ylab("PC2 (20.3%)")
+  p <- p + xlim(-0.075, 0.15)
+  p <- p + geom_text(aes(label=labels, hjust=-0.1), size=3, colour="black")
+  p <- p + theme_bw() # + coord_fixed(ratio=1)
+  p <- p + theme(axis.title=element_text(size=18), axis.text=element_text(size=12), panel.border = element_blank(), panel.grid.major = element_line(colour="grey"), panel.grid.minor = element_line(colour="grey"), axis.line = element_line(colour = "black"), legend.title=element_blank())
+  p
+}
+
+ ## Only Ratites ##
+pca.shape <- prcomp(two.d.array(shape.data[,,-Gg]))
+pc1.shape <- pca.shape$x[,1]
+pc2.shape <- pca.shape$x[,2]
+pc3.shape <- pca.shape$x[,3]
+#write.table(pca.shape$x, file="CrocEndocast_SVP2020_PCscores.txt")
+mspace.palette.2 <- c("#00FF99","#66CCFF", "#FFD961")  # colorblind friendly palette
+#mspace.palette <- c("blue","red", "orange", "white")
+{
+  p <- ggplot(data=NULL, aes(x=pc1.shape, y=pc2.shape))
+  p <- p + geom_point(size=6, shape=21, colour="black", stroke=2, fill=mspace.palette.2[factor(tax.code[-Gg])])
+  p <- p + xlab("PC1 (48.2%)") + ylab("PC2 (10.7%)")
+  p <- p + xlim(-0.075, 0.15)
+  p <- p + geom_text(aes(label=labels[-Gg], hjust=-0.1), size=3, colour="black")
+  p <- p + theme_bw() #+ coord_fixed(ratio=1)
+  p <- p + theme(axis.title=element_text(size=18), axis.text=element_text(size=12), panel.border = element_blank(), panel.grid.major = element_line(colour="grey"), panel.grid.minor = element_line(colour="grey"), axis.line = element_line(colour = "black"), legend.title=element_blank())
+  p
+}
+
+### PC SHAPE CHANGES ###
+
+col.scheme <- rep("lightgreen", dim(shape.data)[[1]])
+col.scheme[opticlobe] <- "salmon"
+col.scheme[cerebellum] <- "skyblue3"
+col.scheme[medulla] <- "gold"
+
+pca <- gm.prcomp(shape.data)
+
+pc1max <- pca$shapes$shapes.comp1$max
+pc1min <- pca$shapes$shapes.comp1$min
+pc2max <- pca$shapes$shapes.comp2$max
+pc2min <- pca$shapes$shapes.comp2$min
+
+spheres3d(pc1max, color=col.scheme, radius=0.005)
+rgl.snapshot(filename = "PC1max_lateral.png")#make a screenshot as previously, you can change the name under"...."
+#rgl.snapshot(filename = "PC1max_posterior.png")#make a screenshot as previously, you can change the name under"...."
+spheres3d(pc1min, color=col.scheme, radius=0.005)
+rgl.snapshot(filename = "PC1min_lateral.png")#make a screenshot as previously, you can change the name under"...."
+spheres3d(pc2max, color=col.scheme, radius=0.005)
+rgl.snapshot(filename = "PC2max_lateral.png")#make a screenshot as previously, you can change the name under"...."
+spheres3d(pc2min, color=col.scheme, radius=0.005)
+rgl.snapshot(filename = "PC2min_lateral.png")#make a screenshot as previously, you can change the name under"...."
+
+### SHAPE VS SIZE ALLOMETRIC TRAJECTORY ###
+cac <- CAC(shape.data, cs, log=TRUE)$CACscores
+rsc1 <- CAC(shape.data, cs, log=TRUE)$RSCscores[,1]
+{
+  p <- ggplot(data=NULL, aes(x=cac, y=rsc1))
+  p <- p + geom_point(size=6, shape=21, colour="black", stroke=2, fill=mspace.palette[factor(tax.code)])
+  p <- p + xlab("Common Allometric Component") + ylab("RSC1")
+  p <- p + geom_text(aes(label=labels, hjust=-0.1), size=3, colour="black")
+  p <- p + geom_smooth(method="lm", aes(group=tax.code), fullrange=TRUE, show.legend=TRUE, color="black")
+  p <- p + theme_bw() #+ coord_fixed(ratio=1)
+  p <- p + theme(axis.title=element_text(size=18), axis.text=element_text(size=12), panel.border = element_blank(), panel.grid.major = element_line(colour="grey"), panel.grid.minor = element_line(colour="grey"), axis.line = element_line(colour = "black"), legend.title=element_blank())
+  p
+}
+ ## Only Ratites ##
+cac <- CAC(shape.data[,,-Gg], cs[-Gg], log=TRUE)$CACscores
+rsc1 <- CAC(shape.data[,,-Gg], cs[-Gg], log=TRUE)$RSCscores[,1]
+{
+  p <- ggplot(data=NULL, aes(x=cac, y=rsc1))
+  p <- p + geom_point(size=6, shape=21, colour="black", stroke=2, fill=mspace.palette.2[factor(tax.code[-Gg])])
+  p <- p + xlab("Common Allometric Component") + ylab("RSC Score")
+  p <- p + geom_text(aes(label=labels[-Gg], hjust=-0.1), size=3, colour="black")
+  p <- p + geom_smooth(method="lm", aes(group=tax.code[-Gg]), fullrange=TRUE, show.legend=TRUE, color="black")
+  p <- p + theme_bw() #+ coord_fixed(ratio=1)
+  p <- p + theme(axis.title=element_text(size=18), axis.text=element_text(size=12), panel.border = element_blank(), panel.grid.major = element_line(colour="grey"), panel.grid.minor = element_line(colour="grey"), axis.line = element_line(colour = "black"), legend.title=element_blank())
+  p
+}
+
+### REGRESSION SCORE: SHAPE VS SIZE ###
+allom.all <- procD.lm(shape.data~log.cs)
+regr.plot <- plot(allom.all, type="regression", predictor=log.cs)
+{
+  p <- ggplot(data=NULL, aes(x=log.cs, y=regr.plot$RegScore))
+  p <- p + geom_point(size=6, shape=21, colour="black", stroke=2, fill=mspace.palette[factor(tax.code)])
+  p <- p + xlab("Log Centroid Size") + ylab("Regression Score")
+  #p <- p + geom_text(aes(label=labels, hjust=-0.1), size=3, colour="black")
+  p <- p + geom_smooth(method="lm", aes(group=tax.code), fullrange=FALSE, show.legend=FALSE, colour="black")
+  p <- p + theme_bw()
+  p <- p + theme(axis.title=element_text(size=18), axis.text=element_text(size=12), panel.border = element_blank(), panel.grid.major = element_line(colour="grey"), panel.grid.minor = element_line(colour="grey"), axis.line = element_line(colour = "black"), legend.title=element_blank())
+  p
+}
+
+ ## Ratites Only ##
+allom.rat <- procD.lm(shape.data[,,ratites]~log.cs[ratites])
+regr.plot <- plot(allom.rat, type="regression", predictor=log.cs[ratites])
+{
+  p <- ggplot(data=NULL, aes(x=log.cs[ratites], y=regr.plot$RegScore))
+  p <- p + geom_point(size=6, shape=21, colour="black", stroke=2, fill=mspace.palette.2[factor(tax.code[ratites])])
+  p <- p + xlab("Log Centroid Size") + ylab("Regression Score")
+  p <- p + geom_text(aes(label=labels[ratites], hjust=-0.1), size=3, colour="black")
+  p <- p + geom_smooth(method="lm", aes(group=tax.code[ratites]), fullrange=FALSE, show.legend=FALSE, colour="black")
+  p <- p + theme_bw()
+  p <- p + theme(axis.title=element_text(size=18), axis.text=element_text(size=12), panel.border = element_blank(), panel.grid.major = element_line(colour="grey"), panel.grid.minor = element_line(colour="grey"), axis.line = element_line(colour = "black"), legend.title=element_blank())
+  p
+}
+
+### RSC vs CAC: SHAPE VS AGE ALLOMETRIC TRAJECTORY ###
+{
+  p <- ggplot(data=NULL, aes(x=cac, y=rsc1))
+  p <- p + geom_point(size=6, shape=21, colour="black", stroke=2, fill=mspace.palette[factor(tax.code[-embryos])])
+  p <- p + xlab("Common Allometric Component (Age)") + ylab("RSC1")
+  p <- p + geom_text(aes(label=labels[-embryos], hjust=-0.1), size=3, colour="black")
+  p <- p + geom_smooth(method="lm", aes(group=tax.code[-embryos]), fullrange=TRUE, show.legend=TRUE, color="black")
+  p <- p + theme_bw()
+  p <- p + theme(axis.title=element_text(size=18), axis.text=element_text(size=12), panel.border = element_blank(), panel.grid.major = element_line(colour="grey"), panel.grid.minor = element_line(colour="grey"), axis.line = element_line(colour = "black"), legend.title=element_blank())
+  p
+}
+
+## Emu + Cassowary ##
+cac <- CAC(shape.data[,,cass.emu], cs[cass.emu], log=TRUE)$CACscores
+rsc1 <- CAC(shape.data[,,cass.emu], cs[cass.emu], log=TRUE)$RSCscores[,1]
+{
+  p <- ggplot(data=NULL, aes(x=cac, y=rsc1))
+  p <- p + geom_point(size=6, shape=21, colour="black", stroke=2, fill=mspace.palette[factor(tax.code[cass.emu])])
+  p <- p + xlab("Common Allometric Component (Size)") + ylab("RSC1")
+  p <- p + geom_text(aes(label=labels[cass.emu], hjust=-0.1), size=3, colour="black")
+  p <- p + geom_smooth(method="lm", aes(group=tax.code[cass.emu]), fullrange=TRUE, show.legend=TRUE, color="black")
+  p <- p + theme_bw()
+  p <- p + theme(axis.title=element_text(size=18), axis.text=element_text(size=12), panel.border = element_blank(), panel.grid.major = element_line(colour="grey"), panel.grid.minor = element_line(colour="grey"), axis.line = element_line(colour = "black"), legend.title=element_blank())
+  p
+}
+
+cac <- CAC(shape.data, tot.age.data, log=TRUE)$CACscores
+rsc1 <- CAC(shape.data, tot.age.data, log=TRUE)$RSCscores[,1]
+{
+  p <- ggplot(data=NULL, aes(x=cac, y=rsc1))
+  p <- p + geom_point(size=6, shape=21, colour="black", stroke=2, fill=mspace.palette[factor(tax.code)])
+  p <- p + xlab("Common Allometric Component (Age)") + ylab("RSC1")
+  p <- p + geom_text(aes(label=labels, hjust=-0.1), size=3, colour="black")
+  p <- p + geom_smooth(method="lm", aes(group=tax.code), fullrange=TRUE, show.legend=TRUE, color="black")
+  p <- p + theme_bw()
+  p <- p + theme(axis.title=element_text(size=18), axis.text=element_text(size=12), panel.border = element_blank(), panel.grid.major = element_line(colour="grey"), panel.grid.minor = element_line(colour="grey"), axis.line = element_line(colour = "black"), legend.title=element_blank())
+  p
+}
+
+### CHICKEN VS RATITE SHAPE ###
+shape.diff <- procD.lm(shape.data~tax.code.2, iter=9999)
+summary(shape.diff)
+
+### OSTRICH VS EMU + CASSOWARY SHAPE ###
+shape.diff <- procD.lm(shape.data[,,ratites]~tax.code.3[ratites], iter=9999)
+summary(shape.diff)
+
+### EMU VS. CASSOWARY SHAPE ###
+shape.diff <- procD.lm(shape.data[,,cass.emu]~tax.code[cass.emu], iter=9999)
+summary(shape.diff)
+
+# Comparison between size allometry of chickens vs. ratites #
+allom.diff <- procD.lm(shape.data~log.cs*tax.code.2, iter=9999)
+summary(allom.diff)
+
+# Comparison between ostrich vs. emu + cassowaries #
+allom.diff <- procD.lm(shape.data[,,ratites]~log.cs[ratites]*tax.code.3[ratites], iter=9999)
+summary(allom.diff)
+
+# Comparison between emu vs. cassowaries #
+cass.emu <- sort(c(Cc, En))
+allom.diff <- procD.lm(shape.data[,,cass.emu]~log.cs[cass.emu]*tax.code[cass.emu], iter=9999)
+summary(allom.diff)
+
+# Comparison between age allometry of chickens vs ratites #
+dev.diff <- procD.lm(shape.data[,,-embryos]~log(age.data[-embryos])*tax.code.2[-embryos], iter=9999)
+summary(dev.diff)

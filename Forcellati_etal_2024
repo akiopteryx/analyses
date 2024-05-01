@@ -58,13 +58,13 @@ Sc.gest <- 42
 tot.age <- age.data$Age_Days
 tot.age[which(tax.code == "Cc")] <- tot.age[which(tax.code == "Cc")]+Cc.gest  
 tot.age[which(tax.code == "Gg")] <- tot.age[which(tax.code == "Gg")]+Gg.gest
-tot.age[which(tax.code == "En")] <- tot.age[which(tax.code == "En")]+En.gest
+tot.age[which(tax.code == "Dn")] <- tot.age[which(tax.code == "Dn")]+En.gest
 tot.age[which(tax.code == "Sc")] <- tot.age[which(tax.code == "Sc")]+Sc.gest
 ## Standardize by approximate age of sexual maturity
 std.tot.age <- tot.age*10000
 std.tot.age[which(tax.code == "Cc")] <- std.tot.age[which(tax.code == "Cc")]/(365*5)   # Southern cassowary reaches sexual maturity 4-7 years
 std.tot.age[which(tax.code == "Gg")] <- std.tot.age[which(tax.code == "Gg")]/(7*12)   # Gallus reaches sexual maturity in 12 weeks
-std.tot.age[which(tax.code == "En")] <- std.tot.age[which(tax.code == "En")]/(365*2)   # Emus reach sexual maturity 2-3 years
+std.tot.age[which(tax.code == "Dn")] <- std.tot.age[which(tax.code == "Dn")]/(365*2)   # Emus reach sexual maturity 2-3 years
 std.tot.age[which(tax.code == "Sc")] <- std.tot.age[which(tax.code == "Sc")]/(365*2)   # Ostriches reach sexual maturity ~2 years
 
 ### CS vs Age ###
@@ -230,13 +230,43 @@ regr.plot <- plot(allom.rat, type="regression", predictor=log.cs[ratites])
   p
 }
 
-### RSC vs CAC: SHAPE VS AGE ALLOMETRIC TRAJECTORY ###
+### REGRESSION SCORE: SHAPE VS STANDARDIZED AGE ###
+allom.all <- procD.lm(shape.data~log(std.tot.age))
+regr.plot <- plot(allom.all, type="regression", predictor=log(std.tot.age))
+{
+  p <- ggplot(data=NULL, aes(x=log(std.tot.age), y=regr.plot$RegScore))
+  p <- p + geom_point(size=6, shape=21, colour="black", stroke=2, fill=mspace.palette[factor(tax.code)])
+  p <- p + xlab("Log Std Tot Age") + ylab("Regression Score")
+  #p <- p + geom_text(aes(label=labels, hjust=-0.1), size=3, colour="black")
+  p <- p + geom_smooth(method="lm", aes(group=tax.code), fullrange=FALSE, show.legend=FALSE, colour="black")
+  p <- p + theme_bw()
+  p <- p + theme(axis.title=element_text(size=18), axis.text=element_text(size=12), panel.border = element_blank(), panel.grid.major = element_line(colour="grey"), panel.grid.minor = element_line(colour="grey"), axis.line = element_line(colour = "black"), legend.title=element_blank())
+  p
+}
+
+## Ratites Only ##
+allom.rat <- procD.lm(shape.data[,,ratites]~log(std.tot.age[ratites]))
+regr.plot <- plot(allom.rat, type="regression", predictor=log(std.tot.age[ratites]))
+{
+  p <- ggplot(data=NULL, aes(x=log(std.tot.age)[ratites], y=regr.plot$RegScore))
+  p <- p + geom_point(size=6, shape=21, colour="black", stroke=2, fill=mspace.palette.2[factor(tax.code[ratites])])
+  p <- p + xlab("Log Std Tot Age") + ylab("Regression Score")
+  #p <- p + geom_text(aes(label=labels[ratites], hjust=-0.1), size=3, colour="black")
+  p <- p + geom_smooth(method="lm", aes(group=tax.code[ratites]), fullrange=FALSE, show.legend=FALSE, colour="black")
+  p <- p + theme_bw()
+  p <- p + theme(axis.title=element_text(size=18), axis.text=element_text(size=12), panel.border = element_blank(), panel.grid.major = element_line(colour="grey"), panel.grid.minor = element_line(colour="grey"), axis.line = element_line(colour = "black"), legend.title=element_blank())
+  p
+}
+
+### RSC vs CAC: SHAPE VS SIZE ALLOMETRIC TRAJECTORY ###
+cac <- CAC(shape.data, cs, log=TRUE)$CACscores
+rsc1 <- CAC(shape.data, cs, log=TRUE)$RSCscores[,1]
 {
   p <- ggplot(data=NULL, aes(x=cac, y=rsc1))
-  p <- p + geom_point(size=6, shape=21, colour="black", stroke=2, fill=mspace.palette[factor(tax.code[-embryos])])
+  p <- p + geom_point(size=6, shape=21, colour="black", stroke=2, fill=mspace.palette[factor(tax.code)])
   p <- p + xlab("Common Allometric Component (Age)") + ylab("RSC1")
-  p <- p + geom_text(aes(label=labels[-embryos], hjust=-0.1), size=3, colour="black")
-  p <- p + geom_smooth(method="lm", aes(group=tax.code[-embryos]), fullrange=TRUE, show.legend=TRUE, color="black")
+  p <- p + geom_text(aes(label=labels, hjust=-0.1), size=3, colour="black")
+  p <- p + geom_smooth(method="lm", aes(group=tax.code), fullrange=TRUE, show.legend=TRUE, color="black")
   p <- p + theme_bw()
   p <- p + theme(axis.title=element_text(size=18), axis.text=element_text(size=12), panel.border = element_blank(), panel.grid.major = element_line(colour="grey"), panel.grid.minor = element_line(colour="grey"), axis.line = element_line(colour = "black"), legend.title=element_blank())
   p
@@ -256,6 +286,7 @@ rsc1 <- CAC(shape.data[,,cass.emu], cs[cass.emu], log=TRUE)$RSCscores[,1]
   p
 }
 
+### RSC vs CAC: SHAPE VS TOTAL AGE ALLOMETRIC TRAJECTORY ###
 cac <- CAC(shape.data, tot.age.data, log=TRUE)$CACscores
 rsc1 <- CAC(shape.data, tot.age.data, log=TRUE)$RSCscores[,1]
 {
@@ -264,6 +295,47 @@ rsc1 <- CAC(shape.data, tot.age.data, log=TRUE)$RSCscores[,1]
   p <- p + xlab("Common Allometric Component (Age)") + ylab("RSC1")
   p <- p + geom_text(aes(label=labels, hjust=-0.1), size=3, colour="black")
   p <- p + geom_smooth(method="lm", aes(group=tax.code), fullrange=TRUE, show.legend=TRUE, color="black")
+  p <- p + theme_bw()
+  p <- p + theme(axis.title=element_text(size=18), axis.text=element_text(size=12), panel.border = element_blank(), panel.grid.major = element_line(colour="grey"), panel.grid.minor = element_line(colour="grey"), axis.line = element_line(colour = "black"), legend.title=element_blank())
+  p
+}
+
+cac <- CAC(shape.data[,,ratites], tot.age.data[ratites], log=TRUE)$CACscores
+rsc1 <- CAC(shape.data[,,ratites], tot.age.data[ratites], log=TRUE)$RSCscores[,1]
+{
+  p <- ggplot(data=NULL, aes(x=cac, y=rsc1))
+  p <- p + geom_point(size=6, shape=21, colour="black", stroke=2, fill=mspace.palette[factor(tax.code)])
+  p <- p + xlab("Common Allometric Component (Age)") + ylab("RSC1")
+  p <- p + geom_text(aes(label=labels, hjust=-0.1), size=3, colour="black")
+  p <- p + geom_smooth(method="lm", aes(group=tax.code), fullrange=TRUE, show.legend=TRUE, color="black")
+  p <- p + theme_bw()
+  p <- p + theme(axis.title=element_text(size=18), axis.text=element_text(size=12), panel.border = element_blank(), panel.grid.major = element_line(colour="grey"), panel.grid.minor = element_line(colour="grey"), axis.line = element_line(colour = "black"), legend.title=element_blank())
+  p
+}
+
+### RSC vs CAC: SHAPE VS STANDARDIZED AGE ###
+cac <- CAC(shape.data, std.tot.age, log=TRUE)$CACscores
+rsc1 <- CAC(shape.data, std.tot.age, log=TRUE)$RSCscores[,1]
+{
+  p <- ggplot(data=NULL, aes(x=cac, y=-rsc1))
+  p <- p + geom_point(size=6, shape=21, colour="black", stroke=2, fill=mspace.palette[factor(tax.code)])
+  p <- p + xlab("Common Allometric Component (Std Total Age)") + ylab("RSC1")
+  p <- p + geom_text(aes(label=labels, hjust=-0.1), size=3, colour="black")
+  p <- p + geom_smooth(method="lm", aes(group=tax.code), fullrange=TRUE, show.legend=TRUE, color="black")
+  p <- p + theme_bw()
+  p <- p + theme(axis.title=element_text(size=18), axis.text=element_text(size=12), panel.border = element_blank(), panel.grid.major = element_line(colour="grey"), panel.grid.minor = element_line(colour="grey"), axis.line = element_line(colour = "black"), legend.title=element_blank())
+  p
+}
+
+### RSC vs CAC: SHAPE VS STANDARDIZED AGE ###
+cac <- CAC(shape.data[,,ratites], std.tot.age[ratites], log=TRUE)$CACscores
+rsc1 <- CAC(shape.data[,,ratites], std.tot.age[ratites], log=TRUE)$RSCscores[,1]
+{
+  p <- ggplot(data=NULL, aes(x=cac, y=rsc1))
+  p <- p + geom_point(size=6, shape=21, colour="black", stroke=2, fill=mspace.palette.2[factor(tax.code[ratites])])
+  p <- p + xlab("Common Allometric Component (Std Total Age)") + ylab("RSC1")
+  #p <- p + geom_text(aes(label=labels[ratites], hjust=-0.1), size=3, colour="black")
+  p <- p + geom_smooth(method="lm", aes(group=tax.code[ratites]), fullrange=TRUE, show.legend=TRUE, color="black")
   p <- p + theme_bw()
   p <- p + theme(axis.title=element_text(size=18), axis.text=element_text(size=12), panel.border = element_blank(), panel.grid.major = element_line(colour="grey"), panel.grid.minor = element_line(colour="grey"), axis.line = element_line(colour = "black"), legend.title=element_blank())
   p
